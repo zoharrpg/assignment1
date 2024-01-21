@@ -119,10 +119,47 @@ typedef struct {
 void* workerThreadStart(void* threadArgs) {
 
     WorkerArgs* args = static_cast<WorkerArgs*>(threadArgs);
+    
+    int remain = args->height % args->numThreads;
+
+    int even_distribution_group = args->height / args->numThreads;
+
+    // calculate the start row 
+
+    int startRow = args->threadId * even_distribution_group;
+    startRow = (remain > 0 && args->threadId-1>0 && args->threadId-1 <=remain) ? startRow+(args->threadId-1) : startRow;
+    startRow = (args->threadId-1>0 && args->threadId-1>remain) ? startRow + remain : startRow;
+
+    // calculate the end row
+    int endRow = startRow + even_distribution_group;
+    endRow = (remain > 0 && args->threadId <=remain) ? endRow+1 : endRow;
+    // if (args->threadId ==args->numThreads-1){
+    //     endRow = args->height;
+    // }
+
+
+    float dx = (args->x1-args->x0) / args->width;
+    float dy = (args->y1 - args->y0) / args->height;
+
+    for (int j = startRow; j < endRow; j++) {
+        for (int i = 0; i < (int)args->width; ++i) {
+            float x = args->x0 + i * dx;
+            float y = args->y0 + j * dy;
+
+            int index = (j * args->width + i);
+            args->output[index] = mandel(x, y, args->maxIterations);
+        }
+    }
+
+    
+
+
+
+    
 
     // TODO: Implement worker thread here.
 
-    printf("Hello world from thread %d\n", args->threadId);
+    //printf("Hello world from thread %d\n", args->threadId);
 
     return NULL;
 }
@@ -150,8 +187,19 @@ void mandelbrotThread(
     WorkerArgs args[MAX_THREADS];
 
     for (int i=0; i<numThreads; i++) {
+        args[i].x0 = x0;
+        args[i].x1 = x1;
+        args[i].y0 = y0;
+        args[i].y1 = y1;
+        args[i].width = width;
+        args[i].height = height;
+        args[i].maxIterations = maxIterations;
+        args[i].output = output;
+        args[i].numThreads = numThreads;
+
         // TODO: Set thread arguments here.
         args[i].threadId = i;
+
     }
 
     // Fire up the worker threads.  Note that numThreads-1 pthreads
